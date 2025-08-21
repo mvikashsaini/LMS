@@ -100,6 +100,19 @@ export default function ContactPage() {
               />
               {errors.email && <span className="text-xs text-red-600 mt-1">{errors.email}</span>}
             </label>
+            {/* need to fix */}
+            <label className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700">Phone</span>
+              <input
+                name="phone"
+                type="tel"
+                value={form.email}
+                onChange={handleChange}
+                className={`mt-2 p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-200 ${errors.email ? "border-red-300" : "border-gray-200"}`}
+                placeholder="+91 12345 67890"
+              />
+              {errors.email && <span className="text-xs text-red-600 mt-1">{errors.email}</span>}
+            </label>
           </div>
 
           <label className="flex flex-col mt-4">

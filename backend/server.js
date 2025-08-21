@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,6 +31,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use("/api/users", userRoutes);
 
 // 404 + Error Handler
 app.use(notFound);
