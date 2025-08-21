@@ -2,36 +2,47 @@ import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
-  const [loginMode, setLoginMode] = useState("email"); // "email" | "phone"
+  const [loginMode, setLoginMode] = useState("email"); // email | phone
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [isOtpVerified, setIsOtpVerified] = useState(false);
 
-  // Dummy OTP handlers
-  const handleSendOtp = () => {
-    setOtpSent(true);
-    alert("Dummy OTP: 1234");
-  };
+  // form states
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleVerifyOtp = () => {
-    if (otp === "1234") {
-      setIsOtpVerified(true);
-      alert("OTP Verified ✅");
-    } else {
-      alert("Invalid OTP ❌");
-    }
-  };
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
 
-  const handleLogin = () => {
-    if (loginMode === "email") {
-      alert("Logged in with Email & Password ✅");
-    } else {
-      if (!isOtpVerified) {
-        alert("Please verify OTP first ❌");
+      const body = {
+        emailOrPhone: loginMode === "email" ? email : phone,
+        password,
+      };
+
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || "Login failed ❌");
         return;
       }
-      alert("Logged in with Phone & OTP ✅");
+
+      // store token + user
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      alert("✅ Logged in successfully");
+      window.location.href = "/"; // redirect
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong ❌");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,7 +53,7 @@ export default function Login() {
         <p className="text-gray-500 mb-6">
           {loginMode === "email"
             ? "Sign in with Email & Password"
-            : "Sign in with Phone & OTP"}
+            : "Sign in with Phone & Password"}
         </p>
 
         {/* Toggle Login Mode */}
@@ -69,7 +80,6 @@ export default function Login() {
           </button>
         </div>
 
-        {/* Email + Password Login */}
         {loginMode === "email" && (
           <>
             {/* Email */}
@@ -77,79 +87,56 @@ export default function Login() {
               <label className="block mb-1 text-sm">Email</label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full border rounded-lg p-2"
               />
             </div>
-
-            {/* Password */}
-            <div className="mb-6 relative">
-              <label className="block mb-1 text-sm">Password</label>
-              <input
-                type={passwordVisible ? "text" : "password"}
-                placeholder="Enter your password"
-                className="w-full border rounded-lg p-2 pr-10"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-8 text-gray-500 bg-white px-1 py-0.5"
-                onClick={() => setPasswordVisible(!passwordVisible)}
-              >
-                {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
           </>
         )}
 
-        {/* Phone + OTP Login */}
         {loginMode === "phone" && (
           <>
-            {/* Phone Number */}
+            {/* Phone */}
             <div className="mb-4">
               <label className="block mb-1 text-sm">Phone Number</label>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  className="flex-1 border rounded-lg p-2"
-                />
-                {!otpSent ? (
-                  <button
-                    onClick={handleSendOtp}
-                    className="bg-blue-500 text-white px-4 rounded-lg"
-                  >
-                    Send OTP
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleVerifyOtp}
-                    className="bg-green-500 text-white px-4 rounded-lg"
-                  >
-                    Verify OTP
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* OTP Input */}
-            {otpSent && (
               <input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="w-full border rounded-lg p-2 mb-4"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your phone number"
+                className="w-full border rounded-lg p-2"
               />
-            )}
+            </div>
           </>
         )}
 
-        {/* Login Button */}
+        {/* Password */}
+        <div className="mb-6 relative">
+          <label className="block mb-1 text-sm">Password</label>
+          <input
+            type={passwordVisible ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            className="w-full border rounded-lg p-2 pr-10"
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-8 text-gray-500 bg-white px-1 py-0.5"
+            onClick={() => setPasswordVisible(!passwordVisible)}
+          >
+            {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
         <button
           onClick={handleLogin}
+          disabled={loading}
           className="w-full bg-green-600 text-white rounded-lg p-2 font-medium"
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
 
         {/* Footer */}

@@ -73,7 +73,7 @@ export default function FooterBar() {
       </div>
 
       {/* line + copyright */}
-      <hr class="border-t border-gray-300 mt-5 w-auto  pb-5" />
+      <hr className="border-t border-gray-300 mt-5 w-auto  pb-5" />
       <div className="pb-5 text-center text-sm text-gray-500">
         © {year} Larnik LMS. All rights reserved
       </div>

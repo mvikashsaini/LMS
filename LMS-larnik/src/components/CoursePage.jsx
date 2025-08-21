@@ -19,8 +19,8 @@ export default function CoursePage() {
 
             <div className="w-[20%] h-48 bg-red-500 shadow-2xl rounded-2xl">
                 <div className="flex flex-row gap-5">
-                    <span class="text-lg">$2999</span>
-                    <span class="text-lg text-muted-foreground line-through">$5,999</span>
+                    <span className="text-lg">$2999</span>
+                    <span className="text-lg text-muted-foreground line-through">$5,999</span>
                     <span>50%off</span>
                 </div>
                  <button className="bg-green-800 w-35 h-9">Enrolled</button>
