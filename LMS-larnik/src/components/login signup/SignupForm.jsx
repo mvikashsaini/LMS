@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // ✅ import navigate
 
 export default function Signup({ role }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -8,36 +9,111 @@ export default function Signup({ role }) {
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [doc, setDoc] = useState(null);
 
-  // OTP handling
-  const handleSendOtp = () => {
-    setOtpSent(true);
-    alert("Dummy OTP: 1234");
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    universityCode: "",
+    referralCode: ""
+  });
+
+  const API_BASE = "http://localhost:5000/api/auth";
+  const navigate = useNavigate(); // ✅ hook for redirection
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
-  const handleVerifyOtp = () => {
-    if (otp === "1234") {
-      setIsOtpVerified(true);
-      alert("OTP Verified");
-    } else {
-      alert("Invalid OTP");
+
+  // Send OTP
+  const handleSendOtp = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: form.phone }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOtpSent(true);
+        alert(`OTP sent ✅ (devOtp: ${data.devOtp})`);
+      } else {
+        alert(data.message || "Failed to send OTP");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error sending OTP");
     }
   };
 
-  const handleFileChange = (e) => {
-    setDoc(e.target.files[0]);
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: form.phone, code: otp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsOtpVerified(true);
+        alert("OTP Verified ✅");
+      } else {
+        alert(data.message || "OTP verification failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error verifying OTP");
+    }
   };
 
-  const handleSignup = () => {
+  // Signup
+  const handleSignup = async () => {
     if (!isOtpVerified) {
       alert("Please verify OTP first");
       return;
     }
-    if (role === "University" && !doc) {
-      alert("Please upload MoU document");
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match");
       return;
     }
-    alert(
-      `Account Created ✅\nRole: ${role}${doc ? `\nUploaded: ${doc.name}` : ""}`
-    );
+
+    try {
+      let res, data;
+
+      if (role === "University") {
+        const fd = new FormData();
+        fd.append("fullName", form.fullName);
+        fd.append("email", form.email);
+        fd.append("phone", form.phone);
+        fd.append("password", form.password);
+        fd.append("role", role);
+        if (doc) fd.append("mou", doc);
+
+        res = await fetch(`${API_BASE}/register`, { method: "POST", body: fd });
+      } else {
+        res = await fetch(`${API_BASE}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, role }),
+        });
+      }
+
+      data = await res.json();
+      if (res.ok) {
+        alert(`Account created ✅\nWelcome ${data.user.fullName}`);
+        localStorage.setItem("token", data.token);
+
+        // ✅ Redirect to login after success
+        navigate("/login"); 
+      } else {
+        alert(data.message || "Signup failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error creating account");
+    }
   };
 
   return (
@@ -47,51 +123,46 @@ export default function Signup({ role }) {
         <p className="text-gray-500 mb-6">Continue as {role}</p>
 
         {/* Full Name */}
-        <div className="mb-4">
-          <label className="block mb-1 text-sm">Full Name</label>
-          <input
-            type="text"
-            placeholder="Enter your full name"
-            className="w-full border rounded-lg p-2"
-          />
-        </div>
+        <input
+          name="fullName"
+          type="text"
+          placeholder="Full Name"
+          value={form.fullName}
+          onChange={handleChange}
+          className="w-full border rounded-lg p-2 mb-3"
+        />
 
         {/* Email */}
-        <div className="mb-4">
-          <label className="block mb-1 text-sm">Email</label>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="w-full border rounded-lg p-2"
-          />
-        </div>
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          className="w-full border rounded-lg p-2 mb-3"
+        />
 
-        {/* Phone Number + OTP */}
-        <div className="mb-4">
-          <label className="block mb-1 text-sm">Phone Number</label>
+        {/* Phone + OTP */}
+        <div className="mb-3">
           <div className="flex gap-2">
             <input
+              name="phone"
               type="tel"
-              placeholder="Enter your phone number"
+              placeholder="Phone"
+              value={form.phone}
+              onChange={handleChange}
               className="flex-1 border rounded-lg p-2"
             />
             {!otpSent ? (
-              <button
-                onClick={handleSendOtp}
-                className="bg-blue-500 text-white px-4 rounded-lg"
-              >
+              <button onClick={handleSendOtp} className="bg-blue-500 text-white px-4 rounded-lg">
                 Send OTP
               </button>
             ) : (
-              <button
-                onClick={handleVerifyOtp}
-                className="bg-green-500 text-white px-4 rounded-lg"
-              >
+              <button onClick={handleVerifyOtp} className="bg-green-500 text-white px-4 rounded-lg">
                 Verify OTP
               </button>
             )}
           </div>
-
           {otpSent && (
             <input
               type="text"
@@ -104,87 +175,62 @@ export default function Signup({ role }) {
         </div>
 
         {/* Password */}
-        <div className="mb-4 relative">
-          <label className="block mb-1 text-sm">Password</label>
+        <div className="relative mb-3">
           <input
+            name="password"
             type={passwordVisible ? "text" : "password"}
-            placeholder="Enter your password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
             className="w-full border rounded-lg p-2 pr-10"
           />
           <button
             type="button"
-            className="absolute right-3 top-8 text-gray-500 bg-white px-1 py-0.5"
             onClick={() => setPasswordVisible(!passwordVisible)}
+            className="absolute right-3 top-2"
           >
             {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
 
         {/* Confirm Password */}
-        <div className="mb-6">
-          <label className="block mb-1 text-sm">Confirm Password</label>
-          <input
-            type="password"
-            placeholder="Confirm your password"
-            className="w-full border rounded-lg p-2"
-          />
-        </div>
+        <input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          className="w-full border rounded-lg p-2 mb-3"
+        />
 
-        {/* Role specific section */}
-        {role === "Student" && <></>}
-
+        {/* Role specific */}
         {role === "Teacher" && (
-          <div className="mb-4">
-            <label className="block mb-1 text-sm">University Code</label>
-            <input
-              type="text"
-              placeholder="Enter your Code"
-              className="w-full border rounded-lg p-2"
-            />
-          </div>
+          <input
+            name="universityCode"
+            placeholder="University Code"
+            value={form.universityCode}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2 mb-3"
+          />
         )}
-
         {role === "University" && (
-          <div className="mb-4">
-            <label className="block mb-1 text-sm">Upload MoU Document</label>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.jpg,.png"
-              onChange={handleFileChange}
-              className="w-full border rounded-lg p-2"
-            />
-            {doc && (
-              <p className="text-xs text-gray-600 mt-1">Selected: {doc.name}</p>
-            )}
+          <div className="mb-3">
+            <input type="file" accept=".pdf,.doc,.docx,.jpg,.png" onChange={(e) => setDoc(e.target.files[0])} />
           </div>
         )}
-
         {role === "Referral" && (
-          <div className="mb-4">
-            <label className="block mb-1 text-sm">Referral Code</label>
-            <input
-              type="text"
-              placeholder="Enter Referral Code"
-              className="w-full border rounded-lg p-2"
-            />
-          </div>
+          <input
+            name="referralCode"
+            placeholder="Referral Code"
+            value={form.referralCode}
+            onChange={handleChange}
+            className="w-full border rounded-lg p-2 mb-3"
+          />
         )}
 
-        {/* Signup Button */}
-        <button
-          onClick={handleSignup}
-          className="w-full bg-green-600 text-white rounded-lg p-2 font-medium"
-        >
+        <button onClick={handleSignup} className="w-full bg-green-600 text-white rounded-lg p-2 font-medium">
           Create Account
         </button>
-
-        {/* Footer */}
-        <p className="text-center text-sm mt-4">
-          Already have an account?{" "}
-          <a href="/login" className="text-green-600 font-semibold">
-            Sign in
-          </a>
-        </p>
       </div>
     </div>
   );
